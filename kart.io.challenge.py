@@ -17,19 +17,24 @@ def find_rectangle ( image ):
   ul = 0
   for row in range(rows) :
     for col in range(cols) :
-      if image[row][col] == 0 and ul == 0 :
+      if image[row][col] == 0 
 # The first thing we're going to come to the upper left corner, so save it
-        ul = (row, col)
+        ( top, left ) = (row, col)
         for col_i in range(col,cols) :
 # We're now looping through the black rectangle: the upper right edge is when
 # the image turns white
           if image[row][col_i] == 1 or col_i == cols-1 :
-            ur = (row, col_i) 
+            right = col_i
             break
-# I can simplify this but I am in a hurry
-      elif image[row][col] == 0 and ul != 0 :
-        ll = (row, col)
-        break
+# 
+          for row_i in range(row, rows) :
+            if image[row_i],[col_i] == 1 or row_i = rows-1 :
+              bottom = row_1
+              break
+
+
+
+
 # go to the next row
 
 
