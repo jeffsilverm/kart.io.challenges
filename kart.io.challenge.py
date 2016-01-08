@@ -33,7 +33,7 @@ def find_rectangle ( image ):
 # go to the next row
 
 
-  return (( ul[0],ul[1],ll[0],ur[1]) 
+  return (( ul[0],ul[1],ll[0],ur[1]) )
 
 
 
@@ -49,7 +49,13 @@ if __name__ == "__main__" :
 	[1, 1, 1, 1, 1, 1, 1],
 ])
   (ur,lc,lr,rc) = find_rectangle( image )
-  print("The black rectangle is at (%d,%d) to (%d,%d)" % ( ur, lc, lr, rc )
+  assert ul == 3, "Upper left corner is %d, should be 3" % ul
+  assert ur == 5, "Upper right corner is %d, should be 5" % ur
+  assert ll == 3, "Lower left corner is %d, should be 3" % ll
+  assert lr == 7, "lower right corner is %d, should be 7" % lr
+# Computers start counting at 0, but humans start counting at 1
+  print("The black rectangle is at (%d,%d) to (%d,%d)" % ( ur+1, lc+1, lr+1, rc+1 ))
+
 
 
 
