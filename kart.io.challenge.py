@@ -23,7 +23,7 @@ def find_rectangle ( image ):
         for col_i in range(col,cols) :
 # We're now looping through the black rectangle: the upper right edge is when
 # the image turns white
-          if image[row][col_i] == 1 :
+          if image[row][col_i] == 1 or col_i == cols-1 :
             ur = (row, col_i) 
             break
 # I can simplify this but I am in a hurry
@@ -49,13 +49,28 @@ if __name__ == "__main__" :
 	[1, 1, 1, 1, 1, 1, 1],
 ])
   (ur,lc,lr,rc) = find_rectangle( image )
-  assert ul == 3, "Upper left corner is %d, should be 3" % ul
-  assert ur == 5, "Upper right corner is %d, should be 5" % ur
-  assert ll == 3, "Lower left corner is %d, should be 3" % ll
-  assert lr == 7, "lower right corner is %d, should be 7" % lr
+  assert ur == 2, "Upper row is %d, should be 2" % ur
+  assert lc == 3, "left colum is %d, should be 3" % lc
+  assert lr == 3, "Lower row is %d, should be 3" % lr
+  assert rc == 6, "right column is %d, should be 6" % lc
 # Computers start counting at 0, but humans start counting at 1
   print("The black rectangle is at (%d,%d) to (%d,%d)" % ( ur+1, lc+1, lr+1, rc+1 ))
 
+# Another test case: rectangle at the right edge
+  image = np.array ([
+	[1, 1, 1, 1, 1, 1, 1],
+	[1, 1, 1, 1, 1, 1, 1],
+	[1, 1, 1, 0, 0, 0, 0],
+	[1, 1, 1, 0, 0, 0, 0],
+	[1, 1, 1, 1, 1, 1, 1],
+])
+  (ur,lc,lr,rc) = find_rectangle( image )
+  assert ur == 2, "Upper row is %d, should be 2" % ur
+  assert lc == 3, "left colum is %d, should be 3" % lc
+  assert lr == 3, "Lower row is %d, should be 3" % lr
+  assert rc == 7, "right column is %d, should be 6" % lc
+# Computers start counting at 0, but humans start counting at 1
+  print("The black rectangle is at (%d,%d) to (%d,%d)" % ( ur+1, lc+1, lr+1, rc+1 ))
 
 
 
