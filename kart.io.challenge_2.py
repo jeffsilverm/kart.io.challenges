@@ -22,6 +22,8 @@
 # from top to bottom instead of bottom to top.
 
 import pprint
+from pdb import set_trace as bp
+
 
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -35,25 +37,36 @@ the values are the width and height"""
     d = {}
     for row in range(rows) :
         for col in range(cols) :
+# The following 2 lines are for debugging purposes - for some reason, this test
+# is flunking
+            if row == 3 and col == 3 :
+                print("Looking for the little rectangle")
+                bp()
             if image[row][col] == 0 :
 # we found the upper left corner, now search the extent of the rectangle
                 top = row
                 left = col
 # Now that we've found the upper left corner, search for the right edge
 # and the bottom
-                for row_i in range(row, rows) :
-                    for col_i in range ( col, cols ):
+                for row_i in range(top, rows) :
+                    for col_i in range ( left, cols ):
                         if image[row_i][col_i] == 0 :
 # Mark that we've already found this pixel in a rectangle.  There might be a
 # more efficient way to do this, think about it if there is time.
-                            image[row_i][col_i] == 2
-                        if image[row_i][col_i] == 1 or col_i == cols-1 :
+                            image[row_i][col_i] = 2
+                        elif image[row_i][col_i] == 1 or col_i == cols-1 :
                             width = col_i - left
                             break   # we're done searching for the right edge
+                        else :
+                            print("image[%d][%d] is %d" % ( row_i, col_i,
+                                                    image[row_i][col_i] ))
+                            raise AssertionError
 # searching for the bottom
                     if image[row_i][left] == 1 or row_i == rows - 1 :
                         height = row_i - top
                 d[(top,left)] = ( width, height )
+# The following line is for debugging purposes
+            print("Just finished searching row %d and col %d" % (row, col) )
 # if we're here, then it's time to search the next pixel.  When the loop is
 # done, we can return the dictionary.
     return d
@@ -61,6 +74,7 @@ the values are the width and height"""
 
 
 if __name__ == "__main__" :
+
 
     def test ( d, rectangles ):
         """Throw an assert exception if the results of the find_rectangles
