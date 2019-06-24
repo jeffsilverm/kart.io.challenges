@@ -15,7 +15,7 @@ FORCE="--force"
 #
 STATEFILE="${PWD}/logrotate_state_file"
 ITERATIONS=5
-ROTATIONS=3
+ROTATIONS=8
 
 # I found this trick with tee at
 # https://stackoverflow.com/questions/4937792/using-variables-inside-a-bash-heredoc
