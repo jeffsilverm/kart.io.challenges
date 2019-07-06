@@ -103,6 +103,21 @@ jeffs@jeffs-desktop:/home/jeffs/work/ATT/logrotate  (development) *  $
 # Stop it with
 # systemctl --user stop logrotator      
 """
+
+"""
+# To enable automatic start at boot time:
+loginctl enable-linger jeffs
+
+To see if the user is enabled, see if a file exists in  /var/lib/systemd/linger
+ls /var/lib/systemd/linger
+
+To disable:
+loginctl enable-linger jeffs
+
+
+
+"""
+
 # NOTE this only works in my environment, you'll have to customize for yours
 """
 journalctl --user --since="2019-06-25" --unit=logrotator

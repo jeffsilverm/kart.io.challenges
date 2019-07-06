@@ -1,0 +1,14 @@
+[
+  {
+    "nameserver": "8.8.8.8",
+    "qtype": "A",
+    "name": "f5",
+    "nominal": "104.219.110.168"
+  },
+  {
+    "nameserver": "8.8.8.8",
+    "qtype": "AAAA",
+    "name": "f5",
+    "nominal": "2620:0:c12:f5f5:1::e8"
+  }
+]
