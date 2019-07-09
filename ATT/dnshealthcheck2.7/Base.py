@@ -1,20 +1,13 @@
-#! /usr/bin/python3
-# -*- coding: utf-8 -*-
-#
-#
-# This program tests an arbitrary number of nameservers.
-# There is a configuration file which has a list of nameservers.  Each
-# nameserver has a list of things to look up.
-# For each thing to look up, there is the name of the thing
-# the type of the thing (an RR as defined by IANA
-# https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml
-#
+"""
+$Id: Base.py,v 1.12.2.19 2011/11/23 17:14:11 customdesigned Exp $
 
-import json
-import sys
-import traceback
+This file is part of the pydns project.
+Homepage: http://pydns.sourceforge.net
 
-import DNS
+This code is covered by the standard Python License.  See LICENSE for details.
+
+    Base functionality. Request and Response classes, that sort of thing.
+"""
 
 import socket, string, types, time, select
 import Type,Class,Opcode
@@ -24,7 +17,7 @@ import asyncore
 # is important to prevent spurious results from lost packets, and malicious
 # cache poisoning.  This doesn't matter if you are behind a caching nameserver
 # or your app is a primary DNS server only. To install your own generator,
-# replace DNS.Base.random.  SystemRandom uses /dev/urandom or similar source.
+# replace DNS.Base.random.  SystemRandom uses /dev/urandom or similar source.  
 #
 try:
   from random import SystemRandom
@@ -63,7 +56,7 @@ def ParseResolvConf(resolv_path="/etc/resolv.conf"):
         if not line or line[0]==';' or line[0]=='#':
             continue
         fields=string.split(line)
-        if len(fields) < 2:
+        if len(fields) < 2: 
             continue
         if fields[0]=='domain' and len(fields) > 1:
             defaults['domain']=fields[1]
@@ -191,7 +184,7 @@ class DnsRequest:
                 source_port = random.randint(1024,65535)
                 self.s.bind(('', source_port))
                 break
-            except socket.error, msg:
+            except socket.error, msg: 
                 # Error 98, 'Address already in use'
                 if msg[0] != 98: raise
 
@@ -357,114 +350,129 @@ class DnsAsyncRequest(DnsRequest,asyncore.dispatcher_with_send):
     def showResult(self,*s):
         self.response.show()
 
-
-# Google's public name servers are 8.8.8.8 and 8.8.4.4 for IPv4, and
-# 2001:4860:4860::8888 and 2001:4860:4860::8844 for IPv6.
-reqobj = DNS.Request(server="192.168.0.1")
-
-
-def main(cfg_file):
-    dns_server_db = read_config_file(cfg_file)
-    verify_nameservers(dns_server_db)
-
-
-def read_config_file(filename):
-    """This subroutine opens file filename, which is a JSON
-    file, and reads it into a list.  The data structure
-    is described above"""
-
-    with open(filename, "r") as fp:
-        dns_server_db_list = json.load(fp)
-    return dns_server_db_list
-
-
-def verify_nameservers(dns_server_list):
-    """This subroutine iterates over the the
-    list of nameservers and tests each one """
-
-    for ns in dns_server_list:
-        verify_nameserver(ns)
-
-
-def verify_nameserver(ns_ut):
-    """This method gets a nameserver, loops
-    over all of the tests that nameserver
-    has to do.
-    ns_ut is the nameserver under test.
-    """
-    if isinstance(ns_ut, dict):
-        verify_nameserver_call(ns_ut)
-    elif isinstance(ns_ut, list):
-        for ns in ns_ut:
-            assert isinstance(ns, dict), str(
-                ns) + "should be a dict, but its a" + \
-                                         str(type(ns_ut)) + " instead"
-            verify_nameserver_call(ns)
-    else:
-        raise ValueError("Was expecting either dict or a list of dicts, "
-                         "but got a " + str(type(ns_ut)) + " instead")
-
-
-def extract_list_of_data(ans):
-    """
-
-    :param ans: a DnsResult object from a call to DNS.req
-    :return: a list of data from the ans object
-    """
-    data_list = []
-    for a in ans.answers:
-        data_list.append(a['data'])
-    return data_list
-
-
-def verify_nameserver_call(key):
-    """This method is what actually does the heavy lifting.
-    It breaks appart the key to get
-
-    """
-    nameserver = key["nameserver"].encode('ascii')
-    qtype = key.get("qtype", "A").encode('ascii')
-    name = key["name"].encode('ascii')
-    nominal = key["nominal"].encode('ascii')
-    comment = key.get("comment", "").encode('ascii')
-    try:
-        answer = reqobj.req(qtype=qtype, server=nameserver, name=name)
-    except DNS.Base.TimeoutError as d:
-        log_fail(nameserver, qtype, name, "Timed out: " + str(d) + ", comment")
-    else:
-        data_list = extract_list_of_data(answer)
-        failure = answer.header['status'] != "NOERROR"
-        if failure:
-            log_fail(nameserver, qtype, name, answer.header['status'], comment)
-        elif nominal not in data_list:
-            log_fail(nameserver, qtype, name,
-                     "%s not in %s" % (nominal, data_list), comment)
-        else:
-            log_success(nameserver, qtype, name, data_list, comment)
-
-
-def log_fail(nameserver, qtype, name, status, comment=""):
-    print("nameserver %s FAILED to lookup %s of %s " %
-          (nameserver, qtype, name), "status is %s  %s " % (status, comment))
-
-
-def log_success(nameserver, qtype, name, d_lst, comment=""):
-    print("nameserver %s successfully looked up %s of %s" % (nameserver,
-                                                             qtype, name),
-          " and got %s | %s " % (d_lst, comment))
-
-
-if "__main__" == __name__:
-    config_filename = sys.argv[1]
-    while True:
-        try:
-            main(config_filename)
-        except KeyboardInterrupt:
-            print("Got control-C")
-            sys.exit(1)
-        # This will handle any exception so be carefull with it
-        except Exception as e:
-            print("Got an exception we didn't plan for %s " % str(e))
-            traceback.print_exc()
-            sys.exit(2)
-
+#
+# $Log: Base.py,v $
+# Revision 1.12.2.19  2011/11/23 17:14:11  customdesigned
+# Apply patch 3388075 from sourceforge: raise subclasses of DNSError.
+#
+# Revision 1.12.2.18  2011/05/02 16:02:36  customdesigned
+# Don't complain about protocol for AXFR unless it needs changing.
+# Reported by Ewoud Kohl van Wijngaarden.
+#
+# Revision 1.12.2.17  2011/03/21 13:01:24  customdesigned
+# Close file for processTCPReply
+#
+# Revision 1.12.2.16  2011/03/21 12:54:52  customdesigned
+# Reply is binary.
+#
+# Revision 1.12.2.15  2011/03/19 22:15:01  customdesigned
+# Added rotation of name servers - SF Patch ID: 2795929
+#
+# Revision 1.12.2.14  2011/03/17 03:46:03  customdesigned
+# Simple test for google DNS with tcp
+#
+# Revision 1.12.2.13  2011/03/17 03:08:03  customdesigned
+# Use blocking IO with timeout for TCP replies.
+#
+# Revision 1.12.2.12  2011/03/16 17:50:00  customdesigned
+# Fix non-blocking TCP replies.  (untested)
+#
+# Revision 1.12.2.11  2010/01/02 16:31:23  customdesigned
+# Handle large TCP replies (untested).
+#
+# Revision 1.12.2.10  2008/08/01 03:58:03  customdesigned
+# Don't try to close socket when never opened.
+#
+# Revision 1.12.2.9  2008/08/01 03:48:31  customdesigned
+# Fix more breakage from port randomization patch.  Support Ipv6 queries.
+#
+# Revision 1.12.2.8  2008/07/31 18:22:59  customdesigned
+# Wait until tcp response at least starts coming in.
+#
+# Revision 1.12.2.7  2008/07/28 01:27:00  customdesigned
+# Check configured port.
+#
+# Revision 1.12.2.6  2008/07/28 00:17:10  customdesigned
+# Randomize source ports.
+#
+# Revision 1.12.2.5  2008/07/24 20:10:55  customdesigned
+# Randomize tid in requests, and check in response.
+#
+# Revision 1.12.2.4  2007/05/22 20:28:31  customdesigned
+# Missing import Lib
+#
+# Revision 1.12.2.3  2007/05/22 20:25:52  customdesigned
+# Use socket.inetntoa,inetaton.
+#
+# Revision 1.12.2.2  2007/05/22 20:21:46  customdesigned
+# Trap socket error
+#
+# Revision 1.12.2.1  2007/05/22 20:19:35  customdesigned
+# Skip bogus but non-empty lines in resolv.conf
+#
+# Revision 1.12  2002/04/23 06:04:27  anthonybaxter
+# attempt to refactor the DNSRequest.req method a little. after doing a bit
+# of this, I've decided to bite the bullet and just rewrite the puppy. will
+# be checkin in some design notes, then unit tests and then writing the sod.
+#
+# Revision 1.11  2002/03/19 13:05:02  anthonybaxter
+# converted to class based exceptions (there goes the python1.4 compatibility :)
+#
+# removed a quite gross use of 'eval()'.
+#
+# Revision 1.10  2002/03/19 12:41:33  anthonybaxter
+# tabnannied and reindented everything. 4 space indent, no tabs.
+# yay.
+#
+# Revision 1.9  2002/03/19 12:26:13  anthonybaxter
+# death to leading tabs.
+#
+# Revision 1.8  2002/03/19 10:30:33  anthonybaxter
+# first round of major bits and pieces. The major stuff here (summarised
+# from my local, off-net CVS server :/ this will cause some oddities with
+# the
+#
+# tests/testPackers.py:
+#   a large slab of unit tests for the packer and unpacker code in DNS.Lib
+#
+# DNS/Lib.py:
+#   placeholder for addSRV.
+#   added 'klass' to addA, make it the same as the other A* records.
+#   made addTXT check for being passed a string, turn it into a length 1 list.
+#   explicitly check for adding a string of length > 255 (prohibited).
+#   a bunch of cleanups from a first pass with pychecker
+#   new code for pack/unpack. the bitwise stuff uses struct, for a smallish
+#     (disappointly small, actually) improvement, while addr2bin is much
+#     much faster now.
+#
+# DNS/Base.py:
+#   added DiscoverNameServers. This automatically does the right thing
+#     on unix/ win32. No idea how MacOS handles this.  *sigh*
+#     Incompatible change: Don't use ParseResolvConf on non-unix, use this
+#     function, instead!
+#   a bunch of cleanups from a first pass with pychecker
+#
+# Revision 1.5  2001/08/09 09:22:28  anthonybaxter
+# added what I hope is win32 resolver lookup support. I'll need to try
+# and figure out how to get the CVS checkout onto my windows machine to
+# make sure it works (wow, doing something other than games on the
+# windows machine :)
+#
+# Code from Wolfgang.Strobl@gmd.de
+# win32dns.py from
+# http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66260
+#
+# Really, ParseResolvConf() should be renamed "FindNameServers" or
+# some such.
+#
+# Revision 1.4  2001/08/09 09:08:55  anthonybaxter
+# added identifying header to top of each file
+#
+# Revision 1.3  2001/07/19 07:20:12  anthony
+# Handle blank resolv.conf lines.
+# Patch from Bastian Kleineidam
+#
+# Revision 1.2  2001/07/19 06:57:07  anthony
+# cvs keywords added
+#
+#
