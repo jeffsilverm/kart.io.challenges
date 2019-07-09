@@ -2,13 +2,13 @@
   {
     "nameserver": "8.8.8.8",
     "qtype": "A",
-    "name": "f5",
+    "name": "f5.com",
     "nominal": "104.219.110.168"
   },
   {
-    "nameserver": "8.8.8.8",
+    "nameserver": "8.8.8.4",
     "qtype": "AAAA",
-    "name": "f5",
+    "name": "f5.com",
     "nominal": "2620:0:c12:f5f5:1::e8"
   }
 ]
