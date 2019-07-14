@@ -7,11 +7,15 @@ from __future__ import print_function
 
 import datetime
 import os
+import stat
 import subprocess
 import sys
 
+# If the following import fails, then use pip to install package future
+
 COMMUNITY_NAME = "public"  # Poor practice - don't hard code community strings
 WIAR = "Working in all respects"
+WARNING = 99999
 inst_lc = 1  # Line counter for instruction file
 
 
@@ -30,9 +34,13 @@ class Checker(object):
     global inst_lc
 
     def __init__(self, logger_filename, inst_filename, my_fqdn):
-        if os.path.isfile(logger_filename):
-            print("File %s already exists - exiting" % logger_filename)
-            sys.exit(1)
+        # if os.path.isfile(logger_filename):
+        #    # print("File %s already exists - do you want to overwrite?" %
+        #    # logger_filename)
+        #    ans = input("File %s already exists - do you want to "
+        #                "overwrite it? " % logger_filename)
+        #    if ans != "y" and ans != "Y" and ans != "YES" or ans != "yes":
+        #        sys.exit(1)
         self.logfile = open(logger_filename, "w")
         self.hostname = my_fqdn
         self.inst_filename = inst_filename  # For documentation purposes
@@ -43,27 +51,35 @@ class Checker(object):
         # The values of this dictionary are lists of tests.
         # An element of this list is the instruction code followed by:
         # error level (SUCCESS, FAILURE, WARNING)
-        # a comment
+        # a message
         # and the parameters
         self.report_dict = dict()
 
-    def append(self, key, err_level, comment ):
-        entry = (err_level, comment)
+    def append(self, key, err_level, message):
+        """
+
+        :rtype: None
+        """
+        entry = (err_level, message)
         if key in self.report_dict:
-            self.report_dict[key]=[entry]
+            self.report_dict[key] = [entry]
         else:
             self.report_dict[key].append(entry)
 
-    def logit(self, inst, status, command, message):
+    def logit(self, inst, status, command, message, results) -> None:
         error_level_str = \
             ("SUCCESS: " if status == 0 else (
-                "WARNING: " if status == 99999 else "FAIL:"))
+                "WARNING: " if status == WARNING else "FAIL:"))  # type: str
+        # results is a byte array and it does not render \n properly.
+        results_str = results.decode("ascii")
         print(
-            "*** {}`` {}``  {}``  ({:d})`` ".format(
-                error_level_str,
+            "*** {}`` {}``  {}``  ({})`` ".format(
+                inst, error_level_str,
                 self.hostname, self.inst_filename,
                 inst_lc), 50 * "*", "\n>>> %s " % " ".join(command),
             "\n", message, "\n", file=self.logfile)
+        print(results_str, file=self.logfile)
+        self.logfile.flush()
 
     def check_dns(self, params):
         """This method does a DNS check"""
@@ -80,9 +96,13 @@ class Checker(object):
         except subprocess.CalledProcessError as p:
             status = p.returncode
             results = ""
+            message = "FAIL: dns check failed because " \
+                      "subprocess.check_output raised a %s exception" % str(p)
         else:
             status = 0
-        self.logit(status=status, message=results, command=args)
+            message = "PASS"
+        self.logit(inst="DNS", status=status, message=message, command=args,
+                   results=results)
 
     def check_ping(self, params):
         """This method does a ping check"""
@@ -94,9 +114,13 @@ class Checker(object):
         except subprocess.CalledProcessError as p:
             status = p.returncode
             results = ""
+            message = "FAIL: ping check failed because " \
+                      "subprocess.check_output raised a %s exception" % str(p)
         else:
             status = 0
-        self.logit(inst="PING", status=status, message=results, command=args)
+            message = "PASS"
+        self.logit(inst="PING", status=status, message=message, command=args,
+                   results=results)
 
     def check_ntp(self, params):
         """This method does a check on NTP"""
@@ -107,11 +131,57 @@ class Checker(object):
         except subprocess.CalledProcessError as p:
             status = p.returncode
             results = ""
-            comment = "Running ntpq caused a CalledProcessError exception to be raised"
+            message = "Running ntpq caused a CalledProcessError exception to " \
+                      "be raised"
         else:
             status = 0
-            comment = WIAR
-        self.logit(inst="NTP", status=status, message=results, command=args)
+            message = WIAR
+            # There is a more sophisticated test that NTP is working
+            # properly, IMPLEMENT THAT LATER!!!!
+        self.logit(inst="NTP", status=status, message=message, results=results,
+                   command=args)
+
+    def check_file(self, params):
+        """Check that a file is protected properly and is owned properly"""
+        nom_uid = (int(params[1]) if isinstance(params[1], str) else params[1])
+        nom_gid = (int(params[2]) if isinstance(params[2], str) else params[2])
+        nom_mode = (int(params[3], base=8) if isinstance(params[3], str) else
+                    params[2])
+        results = b""
+        try:
+            st = os.stat(params[0])
+        except Exception as e:
+            status = 1
+            message = "FAIL: os.stat method raised an exception %s" % str(e)
+        else:
+            uid = st.st_uid
+            gid = st.st_gid
+            mode = stat.S_IMODE(st.st_mode)
+            status = 0
+            if uid == params[1]:
+                uid_ok = "UID OK %d " % uid
+            else:
+                uid_ok = "WARNING: UID is %d should be %d " % \
+                         (uid, nom_uid)
+                status = WARNING
+            if gid == nom_gid:
+                gid_ok = "GID OK %d " % nom_gid
+            else:
+                gid_ok = "WARNING: GID is %d should be %d" % \
+                         (gid, nom_gid)
+                status = WARNING
+            if mode == nom_mode:
+                # Note that the output of the oct function is a string -
+                # easier for
+                # humans to see ints in oct
+                mode_ok = "MODE OK"
+            else:
+                mode_ok = "WRONG: mode is %o should be %s " % (mode,
+                                                               oct(params[3]))
+                status = WARNING
+            message = uid_ok + gid_ok + mode_ok
+        self.logit(inst="FILE", status=status, command="",
+                   message=message, results=results)
 
     def check_snmp(self, cn, params):
         """This method checks SNMP"""
@@ -119,51 +189,53 @@ class Checker(object):
         print("in check_snmp: parameters are: ", params, file=sys.stderr)
         args = ['snmpget', '-v2c', '-c', cn, params[0], params[1]]
         try:
-            results = subprocess.check_call(args)
+            results = subprocess.check_output(args)
         except subprocess.CalledProcessError as p:
             status = p.returncode
             results = ""
-            comment = \
-                "The snmpget command returned code %s and no other results" %\
+            message = \
+                "The snmpget command returned code %s and no other results" % \
                 status
             error_level = "FAIL"
         else:
             status = 0
-            comment = WIAR
+            message = WIAR
             error_level = "PASS"
+        # hide the community name string
         args[3] = "XXXX"
 
-        self.logit(inst="SNMP", status=status, command=" ".join(args),
-                   message=results)
+        self.logit(inst="SNMP", status=status, command=args,
+                   message=message, results=results)
         # error level (SUCCESS, FAILURE, WARNING)
-        # a comment
+        # a message
         # and the parameters
-        self.append('SNMP', error_level, comment )
+        self.append('SNMP', error_level, message)
 
     def report_generator(self):
         """
         This method generates a nicely formatted report.  The first column is
         the test.  The second column is the result (PASS, FAIL, WARN).  The
-        third column is a comment
+        third column is a message
+        :rtype: object
         :return:
         """
-        keys = ['PING','SNMP','NTP','DNS']
+        keys = ['PING', 'SNMP', 'NTP', 'DNS']
         for k in keys:
             if k not in self.report_dict:
                 assert KeyError, "key %s is not in the report_dict"
         for k in self.report_dict.keys():
             if k not in keys:
-                assert KeyError,\
+                assert KeyError, \
                     "key %s is not in the list of keys in the report generator"
-        WIDTH=132
-        line=[]
-        line[0]="+------+--------+----------------------------------------- "
-        line[1]="| Test | Result | Comments"
-        line[2]=line[0]
-        for key in ['PING','SNMP','NTP','DNS']:
-            for test in self.report_dict[key]
 
-
+        line = []
+        line[0] = "+------+--------+----------------------------------------- "
+        line[1] = "| Test | Result | Comments"
+        line[2] = line[0]
+        for key in ['PING', 'SNMP', 'NTP', 'DNS']:
+            for test in self.report_dict[key]:
+                assert test in self.report_generator()
+                raise NotImplemented
 
 
 def get_my_fqdn():
@@ -187,7 +259,7 @@ def main(args):
     checker = Checker(logger_filename=sys.argv[2], inst_filename=sys.argv[1],
                       my_fqdn=my_fqdn)
 
-    for instruction in inst_file.readlines():
+    for instruction in inst_file.readlines():  # type: str
         parameters = instruction.rstrip().split("\t")
         inst = parameters.pop(0)
         if inst == "DNS":
