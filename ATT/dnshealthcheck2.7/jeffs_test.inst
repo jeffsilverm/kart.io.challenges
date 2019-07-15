@@ -1,8 +1,24 @@
-DNS	8.8.8.8	f5.com	A
-DNS	2001:4860:4860::8888	f5.com	A
-DNS	8.8.8.8	f5.com	AAAA
+
+DNS	8.8.8.8	Xyzzy.pt	# This should fail, NXDOMAIN
+FILE	/etc/resolv.conf	0	0	644
+FILE	/home/jeffs/temp.txt	1000	1000	664	# This is actually correct
+FILE	/home/jeffs/temp.txt	1000	1000	660	# This file is actually protected 664
+FILE	/home/jeffs/temp.txt	1000	0	664	# This file belongs to me, but I'm not in GID 0
+FILE	/home/jeffs/temp.txt	0	1000	664	# This file belongs to me, but I'm not in UID 0
+ERC	/etc/resolv.conf	f5.com
+DNS	8.8.8.8	f5.com	A	# This should work
+DNS	1.1.1.1	f5.com	A	# This should fail, non-existant name server
+DNS	8.8.8.8	Xyzzy.pt	# This should fail, NXDOMAIN
+DNS	2001:4860:4860::8888	f5.com	A	# This should work
+DNS	2001:4860:4860::1:8888	f5.com	A	# This should fail, non-existant name server
+DNS	2001:4860:4860::8888	Xyzzy.pt	A	# This should fail, NXDOMAIN
+DNS	8.8.8.8	f5.com	AAAA	# This should work
 DNS	2001:4860:4860::8888	f5.com	AAAA
-PING	192.168.0.1
-PING	f5.com
+PING	192.168.0.1	# This should work
+PING	f5.com	# This should work
+PING	xyzzy.tv	# This should fail, non-existant name server
+PING	nasa.gov	# This should fail, NASA's site is not pingable (they have a firewall)
 NTP
 SNMP	localhost	1.3.6.1.2.1.1.5.0
+SNMP	f5.com	1.3.6.1.2.1.1.5.0	# This should fail for so many reasons
+
